@@ -1,0 +1,52 @@
+on:
+  workflow_dispatch:
+
+jobs:
+  fast-browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+
+    steps:
+      - name: Install Lightweight Desktop & Browser (Chromium)
+        run: |
+          sudo apt-get update
+          # تثبيت واجهة IceWM الخفيفة جداً ومتصفح Chromium السريع
+          sudo apt-get install -y icewm chromium-browser xrdp
+          sudo systemctl enable xrdp
+          echo "icewm-session" > ~/.xsession
+          sudo systemctl restart xrdp
+
+      - name: Create User
+        run: |
+          sudo useradd -m -s /bin/bash webuser
+          echo "webuser:MR.English2008" | sudo chpasswd
+          sudo usermod -aG sudo webuser
+
+      - name: Install Tailscale
+        run: |
+          curl -fsSL https://tailscale.com/install.sh | sh
+
+      - name: Connect Tailscale
+        run: |
+          sudo tailscale up --authkey=${{ secrets.TAILSCALE_AUTHKEY }} --hostname=fast-browser-$GITHUB_RUN_ID
+          
+          tsIP=""
+          while [ -z "$tsIP" ]; do
+              tsIP=$(tailscale ip -4)
+              sleep 2
+          done
+          echo "TAILSCALE_IP=$tsIP" >> $GITHUB_ENV
+
+      - name: Show Connection Info
+        run: |
+          echo "===================================="
+          echo "🚀 Fast Browser Server is Ready!"
+          echo "📍 Tailscale IP: $TAILSCALE_IP"
+          echo "👤 User: webuser"
+          echo "🔑 Password: MR.English2008"
+          echo "🌐 Browser: Chromium (Pre-installed)"
+          echo "===================================="
+          while true; do
+              sleep 300
+          done
+          
